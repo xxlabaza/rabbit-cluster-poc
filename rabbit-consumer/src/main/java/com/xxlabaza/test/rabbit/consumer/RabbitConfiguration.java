@@ -16,11 +16,10 @@
 
 package com.xxlabaza.test.rabbit.consumer;
 
+import static java.util.Optional.ofNullable;
 import static java.util.function.Predicate.not;
 import static java.util.stream.Collectors.toList;
-import static java.util.Optional.ofNullable;
 
-import java.util.List;
 import java.util.stream.Stream;
 
 import com.rabbitmq.http.client.Client;
@@ -49,15 +48,21 @@ class RabbitConfiguration {
 
   @Bean
   RabbitRestClient rabbitRestClient () {
-    List<Client> clients =  ofNullable(apiAddresses)
+    val clients =  ofNullable(apiAddresses)
         .map(String::trim)
         .filter(not(String::isEmpty))
         .map(this::toHostPortStream)
         .orElseGet(() -> getDefaultApiHostPortStream())
         .map(this::createClient)
-        .collect(toList());;
+        .collect(toList());
 
-    return new RabbitRestClient(clients);
+    if (clients.isEmpty()) {
+      throw new IllegalStateException("there are no available RabbitMQ REST API clients");
+    }
+
+    val result = new RabbitRestClient(clients);
+    result.getAllQueueNames(); // check nodes availability
+    return result;
   }
 
   @Bean
@@ -75,7 +80,7 @@ class RabbitConfiguration {
   }
 
   private Stream<String> toHostPortStream (String addresses) {
-    return Stream.of(apiAddresses.split(","))
+    return Stream.of(addresses.split("\\,"))
         .map(String::trim)
         .filter(not(String::isEmpty));
   }
@@ -83,7 +88,7 @@ class RabbitConfiguration {
   private Stream<String> getDefaultApiHostPortStream () {
     val addresses = rabbitProperties.determineAddresses();
     return toHostPortStream(addresses)
-        .map(it -> it.split(":")[0])
+        .map(it -> it.split("\\:")[0])
         .map(it -> it + ":15672");
   }
 

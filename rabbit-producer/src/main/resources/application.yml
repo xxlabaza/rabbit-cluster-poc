@@ -1,6 +1,7 @@
 
 spring:
   application.name: rabbit-producer
+  main.web-application-type: none
   rabbitmq:
     addresses: localhost:5672,localhost:6672
     username: admin
@@ -10,5 +11,8 @@ spring:
       initial-interval: 500
       max-attempts: 3
 
-server:
-  port: 9090
+---
+spring:
+  profiles: stage
+  rabbitmq:
+    addresses: P4-IO-PSH-MQ-1.infobip.local:5672,P4-IO-PSH-MQ-2.infobip.local:5672

@@ -52,7 +52,7 @@ class ConsumerService {
   @SneakyThrows
   public void receive (byte[] bytes) {
     val pushMessage = objectMapper.readValue(bytes, PushMessage.class);
-    log.info("inbound - {}", pushMessage);
+    log.info("inbound\n  {}", pushMessage);
   }
 
   @Scheduled(fixedRate = 5_000)
