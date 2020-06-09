@@ -18,6 +18,7 @@ package com.xxlabaza.test.rabbit.consumer;
 
 import static java.util.function.Predicate.not;
 import static java.util.stream.Collectors.toList;
+import static java.util.Optional.ofNullable;
 
 import java.util.List;
 import java.util.stream.Stream;
@@ -48,11 +49,13 @@ class RabbitConfiguration {
 
   @Bean
   RabbitRestClient rabbitRestClient () {
-    List<Client> clients = Stream.of(apiAddresses.split(","))
+    List<Client> clients =  ofNullable(apiAddresses)
         .map(String::trim)
         .filter(not(String::isEmpty))
+        .map(this::toHostPortStream)
+        .orElseGet(() -> getDefaultApiHostPortStream())
         .map(this::createClient)
-        .collect(toList());
+        .collect(toList());;
 
     return new RabbitRestClient(clients);
   }
@@ -69,6 +72,19 @@ class RabbitConfiguration {
   @Bean
   MessageListenerAdapter listenerAdapter (ConsumerService consumer) {
     return new MessageListenerAdapter(consumer, "receive");
+  }
+
+  private Stream<String> toHostPortStream (String addresses) {
+    return Stream.of(apiAddresses.split(","))
+        .map(String::trim)
+        .filter(not(String::isEmpty));
+  }
+
+  private Stream<String> getDefaultApiHostPortStream () {
+    val addresses = rabbitProperties.determineAddresses();
+    return toHostPortStream(addresses)
+        .map(it -> it.split(":")[0])
+        .map(it -> it + ":15672");
   }
 
   @SneakyThrows
