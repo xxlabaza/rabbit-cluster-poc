@@ -1,0 +1,14 @@
+
+spring:
+  application.name: rabbit-producer
+  rabbitmq:
+    addresses: localhost:5672,localhost:6672
+    username: admin
+    password: admin
+    template.retry:
+      enabled: true
+      initial-interval: 500
+      max-attempts: 3
+
+server:
+  port: 9090

@@ -1,0 +1,12 @@
+
+spring:
+  application.name: rabbit-consumer
+  rabbitmq:
+    addresses: localhost:5672,localhost:6672
+    username: admin
+    password: admin
+    custom:
+     api-addresses: localhost:8080,localhost:8081
+
+server:
+  port: 9090

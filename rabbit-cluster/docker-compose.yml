@@ -1,0 +1,31 @@
+
+version: '2.1'
+
+services:
+
+  rogue-leader:
+    build: './'
+    environment:
+      - RABBITMQ_ERLANG_COOKIE=cluster-secret
+      - RABBITMQ_NODENAME=rabbit@rogue-leader
+      - X_RABBITMQ_HOSTS=rogue-leader,rogue-two
+    ports:
+      - '5672:5672' # non-TLS AMQP 0-9-1 and 1.0 clients
+      - '8080:15672' # management UI
+    volumes:
+      - $PWD/rabbit1-data:/var/lib/rabbitmq
+
+  rogue-two:
+    build: './'
+    environment:
+      - RABBITMQ_ERLANG_COOKIE=cluster-secret
+      - RABBITMQ_NODENAME=rabbit@rogue-two
+      - X_RABBITMQ_HOSTS=rogue-leader,rogue-two
+    ports:
+      # - '4369:4369' # EPMD
+      # - '5671:5671' # TLS AMQP 0-9-1 and 1.0 clients
+      # - '25672:25672' # inter-node and CLI tools communication
+      - '6672:5672' # non-TLS AMQP 0-9-1 and 1.0 clients
+      - '8081:15672' # management UI
+    volumes:
+      - $PWD/rabbit2-data:/var/lib/rabbitmq
