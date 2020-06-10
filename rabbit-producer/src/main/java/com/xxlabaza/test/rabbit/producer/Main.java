@@ -81,10 +81,10 @@ public class Main implements CommandLineRunner {
     System.out.println(" * error  - dead lettering single message example");
   }
 
-  private class SingleCommand implements Callable {
+  private class SingleCommand implements Callable<Void> {
 
     @Override
-    public Object call () throws Exception {
+    public Void call () throws Exception {
       log.info("sending 1_000_000 messages for one queue...");
       for (int i = 0; i < 1_000_000; i++) {
         val pushMessage = PushMessage.random(42);
@@ -95,11 +95,11 @@ public class Main implements CommandLineRunner {
     }
   }
 
-  private class ManyCommand implements Callable {
+  private class ManyCommand implements Callable<Void> {
 
     @Override
     @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
-    public Object call () throws Exception {
+    public Void call () throws Exception {
       val queues = 20;
       log.info("creating {} queues and sending messages", queues);
 
@@ -144,10 +144,10 @@ public class Main implements CommandLineRunner {
     }
   }
 
-  private class ErrorCommand implements Callable {
+  private class ErrorCommand implements Callable<Void> {
 
     @Override
-    public Object call () throws Exception {
+    public Void call () throws Exception {
       val pushMessage = PushMessage.random().withPayload("error");
       queuesService.send(pushMessage);
       return null;
