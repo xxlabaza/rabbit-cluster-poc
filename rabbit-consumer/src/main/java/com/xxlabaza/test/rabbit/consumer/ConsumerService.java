@@ -25,17 +25,20 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
+import org.springframework.amqp.core.Message;
+import org.springframework.amqp.core.MessageListener;
 import org.springframework.amqp.rabbit.listener.AbstractMessageListenerContainer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Service
-class ConsumerService {
+class ConsumerService implements MessageListener {
 
-  private static final Pattern QUEUE_NAME_PATTERN = Pattern.compile("ha.(?<type>\\w+)_(?<channel>\\d+)_queue");
+  private static final Pattern QUEUE_NAME_PATTERN = Pattern.compile("^ha.(?<type>\\w+)_(?<channel>\\d+)_queue$");
 
   @Autowired
   @Qualifier("queuesListener")
@@ -49,10 +52,17 @@ class ConsumerService {
 
   Map<Integer, Set<String>> queues = new ConcurrentHashMap<>();
 
+  @Override
   @SneakyThrows
-  public void receive (byte[] bytes) {
+  @Transactional
+  public void onMessage (Message message) {
+    val bytes = message.getBody();
     val pushMessage = objectMapper.readValue(bytes, PushMessage.class);
+
     log.info("inbound\n  {}", pushMessage);
+    if (pushMessage.getPayload().equals("error")) {
+      throw new IllegalArgumentException("popa");
+    }
   }
 
   @Scheduled(fixedRate = 5_000)
@@ -65,7 +75,6 @@ class ConsumerService {
     if (newQueueNames.length == 0) {
       return;
     }
-
     log.info("new queues {}", (Object) newQueueNames);
     queuesListener.addQueueNames(newQueueNames);
   }

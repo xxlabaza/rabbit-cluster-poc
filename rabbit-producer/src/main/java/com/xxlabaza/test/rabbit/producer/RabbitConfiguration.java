@@ -21,7 +21,9 @@ import org.springframework.amqp.core.ExchangeBuilder;
 import org.springframework.amqp.core.TopicExchange;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.amqp.rabbit.transaction.RabbitTransactionManager;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingClass;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -41,11 +43,18 @@ class RabbitConfiguration {
   RabbitTemplate rabbitTemplate (ConnectionFactory connectionFactory) {
     val rabbitTemplate = new RabbitTemplate(connectionFactory);
     rabbitTemplate.setMessageConverter(producerJackson2MessageConverter());
+    rabbitTemplate.setChannelTransacted(true);
     return rabbitTemplate;
   }
 
   @Bean
   Jackson2JsonMessageConverter producerJackson2MessageConverter () {
     return new Jackson2JsonMessageConverter();
+  }
+
+  @Bean
+  @ConditionalOnMissingClass("org.springframework.orm.jpa.JpaTransactionManager")
+  RabbitTransactionManager rabbitTransactionManager (ConnectionFactory connectionFactory) {
+    return new RabbitTransactionManager(connectionFactory);
   }
 }

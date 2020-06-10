@@ -22,6 +22,7 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 class QueuesService {
@@ -36,7 +37,8 @@ class QueuesService {
   @Autowired
   RoutesManager routesManager;
 
-  void send (PushMessage pushMessage) {
+  @Transactional
+  public void send (PushMessage pushMessage) {
     val routingKey = routesManager.getRoutingKey(pushMessage);
     rabbitTemplate.convertAndSend(inboundMessagesExchange.getName(), routingKey, pushMessage);
   }

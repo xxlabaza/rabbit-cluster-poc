@@ -60,6 +60,9 @@ public class Main implements CommandLineRunner {
     case "many":
       new ManyCommand().call();
       break;
+    case "error":
+      new ErrorCommand().call();
+      break;
     default:
       printUsage("Unknown command '" + args[0] + '\'');
       Runtime.getRuntime().exit(1);
@@ -75,6 +78,7 @@ public class Main implements CommandLineRunner {
     System.out.println("Available commands are:");
     System.out.println(" * single - for one queue load generating");
     System.out.println(" * many   - for creating 20 different queues");
+    System.out.println(" * error  - dead lettering single message example");
   }
 
   private class SingleCommand implements Callable {
@@ -137,6 +141,16 @@ public class Main implements CommandLineRunner {
         }
         countDownLatch.countDown();
       }
+    }
+  }
+
+  private class ErrorCommand implements Callable {
+
+    @Override
+    public Object call () throws Exception {
+      val pushMessage = PushMessage.random().withPayload("error");
+      queuesService.send(pushMessage);
+      return null;
     }
   }
 }

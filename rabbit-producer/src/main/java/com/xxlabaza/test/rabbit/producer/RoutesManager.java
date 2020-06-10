@@ -63,25 +63,37 @@ class RoutesManager {
   }
 
   private void createQueue (String routingKey, PushMessage pushMessage) {
-    val queueType = pushMessage.getType().name().toLowerCase(ENGLISH);
-    val queueName = String.format(ENGLISH, "ha.%s_%d_queue", queueType, pushMessage.getChannel());
-    val queue = QueueBuilder
-        .durable(queueName)
-        .build();
-
     val clientExchangeName = String.format(ENGLISH, "client_%d_exchange", pushMessage.getChannel());
     val clientExchange = (DirectExchange) ExchangeBuilder.directExchange(clientExchangeName)
         .durable(true)
         .build();
 
+    val queueType = pushMessage.getType().name().toLowerCase(ENGLISH);
+
+    val retryQueueName = String.format(ENGLISH, "ha.%s_%d_retry_queue", queueType, pushMessage.getChannel());
+    val retryQueueRoutingKey = routingKey + ".retry";
+    val retryQueue = QueueBuilder
+        .durable(retryQueueName)
+        .build();
+
+    val queueName = String.format(ENGLISH, "ha.%s_%d_queue", queueType, pushMessage.getChannel());
+    val queue = QueueBuilder
+        .durable(queueName)
+        .deadLetterExchange(clientExchangeName)
+        .deadLetterRoutingKey(retryQueueRoutingKey)
+        .build();
+
+    val retryQueueBinding = BindingBuilder.bind(retryQueue).to(clientExchange).with(retryQueueRoutingKey);
     val queueBinding = BindingBuilder.bind(queue).to(clientExchange).with(routingKey);
 
     val topLevelRoutingKey = String.format(ENGLISH, "pushMessage.%d.#", pushMessage.getChannel());
     val exchangeBinding = BindingBuilder.bind(clientExchange).to(inboundMessagesExchange).with(topLevelRoutingKey);
 
-    admin.declareQueue(queue);
     admin.declareExchange(clientExchange);
+    admin.declareQueue(retryQueue);
+    admin.declareQueue(queue);
     admin.declareBinding(queueBinding);
+    admin.declareBinding(retryQueueBinding);
     admin.declareBinding(exchangeBinding);
   }
 }

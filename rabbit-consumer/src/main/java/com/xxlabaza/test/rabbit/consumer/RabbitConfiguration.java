@@ -26,12 +26,15 @@ import com.rabbitmq.http.client.Client;
 import com.rabbitmq.http.client.ClientParameters;
 import lombok.SneakyThrows;
 import lombok.val;
+import org.springframework.amqp.core.MessageListener;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer;
 import org.springframework.amqp.rabbit.listener.adapter.MessageListenerAdapter;
+import org.springframework.amqp.rabbit.transaction.RabbitTransactionManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.amqp.RabbitProperties;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingClass;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableScheduling;
@@ -45,6 +48,28 @@ class RabbitConfiguration {
 
   @Autowired
   RabbitProperties rabbitProperties;
+
+  @Bean
+  SimpleMessageListenerContainer queuesListener (ConnectionFactory connectionFactory, MessageListener messageListener) {
+    val container = new SimpleMessageListenerContainer();
+    container.setConnectionFactory(connectionFactory);
+    // container.setQueueNames(queue().getName());
+    container.setMessageListener(messageListener);
+    container.setChannelTransacted(true);
+    container.setDefaultRequeueRejected(false);
+    return container;
+  }
+
+  @Bean
+  MessageListener messageListener (ConsumerService consumer) {
+    return new MessageListenerAdapter(consumer);
+  }
+
+  @Bean
+  @ConditionalOnMissingClass("org.springframework.orm.jpa.JpaTransactionManager")
+  RabbitTransactionManager rabbitTransactionManager (ConnectionFactory connectionFactory) {
+    return new RabbitTransactionManager(connectionFactory);
+  }
 
   @Bean
   RabbitRestClient rabbitRestClient () {
@@ -63,20 +88,6 @@ class RabbitConfiguration {
     val result = new RabbitRestClient(clients);
     result.getAllQueueNames(); // check nodes availability
     return result;
-  }
-
-  @Bean
-  SimpleMessageListenerContainer queuesListener (ConnectionFactory connectionFactory, MessageListenerAdapter listenerAdapter) {
-    val container = new SimpleMessageListenerContainer();
-    container.setConnectionFactory(connectionFactory);
-    // container.setQueueNames(queue().getName());
-    container.setMessageListener(listenerAdapter);
-    return container;
-  }
-
-  @Bean
-  MessageListenerAdapter listenerAdapter (ConsumerService consumer) {
-    return new MessageListenerAdapter(consumer, "receive");
   }
 
   private Stream<String> toHostPortStream (String addresses) {
